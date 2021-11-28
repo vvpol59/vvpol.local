@@ -105,11 +105,6 @@ function actionAdd($name, $maxTime){
 
 try {
     $auth = explode('~', (isset($_COOKIE['auth']) ? $_COOKIE['auth'] : '~') . '~');
-
-
-
-
-
     $post = $body = file_get_contents('php://input');
     //self::$response['re'] = $a;
     //self::$response['srv'] = $_SERVER;
