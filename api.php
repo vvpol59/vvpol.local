@@ -138,6 +138,4 @@ try {
     //}
     echo json_encode($response);
 }
-
-
 // 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
