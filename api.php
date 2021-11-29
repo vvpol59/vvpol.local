@@ -6,7 +6,7 @@ ini_set('display_startup_errors', 1);
 
 
 
-$db = new SQLite3("working_time_log.db");
+$db = new SQLite3("data/working_time_log.db");
 $response = array(
     'jsonrpc' => '2.0',
     'result' => array(),
@@ -54,6 +54,12 @@ function callRemoteMethod($class, $method, $params)
     }
 }
 
+/**
+ * Удалённое выполнение функции
+ * @param $fun
+ * @param $params
+ * @return mixed
+ */
 function callRemoteFunction($fun, $params)
 {
     return call_user_func_array($fun, $params);

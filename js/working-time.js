@@ -59,19 +59,14 @@
     /**
      *
      * @param text
-     * @param show
      */
-    function showWaitOverlay(text, show) {
+    function showWaitOverlay(text) {
         var $overlay = $('.wait-overlay');
         if (text) {
             $overlay.find('.wait-overlay-text').text(text);
-        }
-        if (show === true) {
             $overlay.css({display: 'flex'});
-        } else if (show === false) {
-            $overlay.css({display: 'none'})
         } else {
-
+            $overlay.css({display: 'none'});
         }
     }
 
@@ -107,33 +102,116 @@
         });
     }
 
+    /**
+     * Выполнение серверной функции
+     * @param fun
+     * @param params
+     * @param id
+     * @param msg
+     * @param success
+     * @param fail
+     */
+    function execRemoteFun(fun, params, id, msg, success, fail) {
+        var _this = this;
+        showWaitOverlay(msg);
+
+        var data = JSON.stringify({
+            "jsonrpc": "2.0",
+            "method": fun,
+            "params": params,
+            "id" : id
+        });
+
+        $.ajax({
+            url: window.location.protocol + '//' + window.location.host + '/api.php',
+            type: "POST",
+            contentType: 'application/json',
+            async: false,
+            data: data,
+            error: function(data){
+                showWaitOverlay('');
+                if (fail) {
+                    fail(data);
+                } else {
+                    alert(data.errorMessage);
+                }
+            },
+            complete: function(data) {
+                var obj = $.parseJSON(data.responseText);  // todo Правильно обработать ответ не в JSON
+                showWaitOverlay('');
+                if (obj.error){
+                    alert(obj.error.message);
+                } else {
+                    if (success) {
+                        success(obj);
+                    }
+                }
+            }
+        });
+
+    }
+
+
+    /**
+     *
+     */
+    function loadLog() {
+
+    }
+
+    /**
+     *
+     */
+    function killAction() {
+
+    }
+
+    /**
+     *
+     */
+    function editAction() {
+
+    }
+
+    /**
+     *
+     */
+    function changeAction(){
+
+    }
 
     /**
      * Загрузка справочника действий
      */
     function loadActions() {
-        function onSuccessSend(response) {
-            var data = JSON.parse(response);
-            if (!data.error){
-                var $actionList = $('#data-rows').empty(), $ptr;
-                for (var i = 0; i < data.result.length; i++){
-                    $ptr = $('#data-ptr').css('display', '').clone();
-                    $ptr.data('id', data.result[i].id);
-                    $ptr.find('._name').text(data.result[i].name);
-                    $ptr.find('._limit').text(data.result[i]['max_time']);
+        function onSuccess(response) {
+            if (!response.error){
+                var data = response.result,
+                    $actionList = $('#data-rows').empty(), $ptr;
+                for (var i = 0; i < data.length; i++){
+                    $ptr = $('#data-ptr').css('display', '')
+                        .clone()
+                        .removeAttr('id');
+                    $ptr.data('id', data[i].id);
+                    $ptr.find('._name').text(data[i].name);
+                    $ptr.find('._limit').text(data[i]['max_time']);
                     $ptr.appendTo($actionList);
                 }
             }
-            alert(data);
-            console.log(data);
+            //alert(data);
+            //console.log(data);
         }
 
+        execRemoteFun('actionList', [], 1,'Загрузка справочников', onSuccess);
+
+        /*
         var data = JSON.stringify({
             jsonrpc: "2.0",
             method: 'actionList',
             params: [],
             id : 1
         });
+
 
 
         sendAjax({
@@ -145,17 +223,24 @@
             contentType: 'application/json',
             process: true
         }, onSuccessSend);
+        */
     }
 
 
+    /**
+     *
+     */
     function addAction() {
-        function onSuccessSend(response) {
+        function onSuccess(response) {
             alert(response);
             console.log(response);
 
         }
 
         function insertAction() {
+            execRemoteFun('actionAdd', 1, 'Отправка данных', onSuccess);
+
+            /*
             var data = JSON.stringify({
                 jsonrpc: "2.0",
                 method: 'actionAdd',
@@ -174,8 +259,8 @@
                 //contentType: 'application/json',
                 process: true
             }, onSuccessSend);
+            */
         }
-
 
         var $dialog = $('#action-box');
 
@@ -200,8 +285,6 @@
                 }
             ]
         });
-
-
     }
 
 
