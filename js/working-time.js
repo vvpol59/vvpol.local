@@ -1,6 +1,8 @@
 "use strict";
 
 (function () {
+    var $logData;
+
 
     /**
      *
@@ -174,9 +176,19 @@
     }
 
     /**
-     *
+     * Смена действия
      */
     function changeAction(){
+        var $row = $(this),
+            curId = $logData.find('.active').data('id'),
+            newId;
+        if (!$row.hasClass('active')){
+        //if ($active.length === 0 || $row !== $active){
+            newId = $row.data('id');
+            $logData.find('tr').removeClass('active');
+            $row.addClass('active');
+            execRemoteFun('changeAction', [curId, newId], 1,'Смена действия', onSuccess);
+        }
 
     }
 
@@ -187,7 +199,9 @@
         function onSuccess(response) {
             if (!response.error){
                 var data = response.result,
-                    $actionList = $('#data-rows').empty(), $ptr;
+                    $actionList = $('#data-rows').empty(),
+                    $logData = $('#tabs-1').find('._data').empty(),
+                    $ptr;
                 for (var i = 0; i < data.length; i++){
                     $ptr = $('#data-ptr').css('display', '')
                         .clone()
@@ -196,6 +210,11 @@
                     $ptr.find('._name').text(data[i].name);
                     $ptr.find('._limit').text(data[i]['max_time']);
                     $ptr.appendTo($actionList);
+                    //-----------
+                    $ptr = $('#tabs-1').find('._ptr tr').clone();
+                    $ptr.data('id', data[i].id);
+                    $ptr.find('._name').text(data[i].name);
+                    $ptr.appendTo($logData);
                 }
             }
             //alert(data);
@@ -203,32 +222,18 @@
         }
 
         execRemoteFun('actionList', [], 1,'Загрузка справочников', onSuccess);
-
-        /*
-        var data = JSON.stringify({
-            jsonrpc: "2.0",
-            method: 'actionList',
-            params: [],
-            id : 1
-        });
-
-
-
-        sendAjax({
-            method: 'POST',
-            url: window.location.protocol + '//' + window.location.host + '/api.php',
-            waitMsg: 'Выборка данных',
-            dataType: 'json',
-            data: data,
-            contentType: 'application/json',
-            process: true
-        }, onSuccessSend);
-        */
     }
 
+    function loadActionLog(begDate, endDate) {
+        function onSuccess(response) {
+            console.log(response)
+        }
+
+        execRemoteFun('actionList', [begDate, endDate], 1,'Загрузка данных', onSuccess);
+    }
 
     /**
-     *
+     * Добавить дйствие
      */
     function addAction() {
         function onSuccess(response) {
@@ -237,29 +242,11 @@
 
         }
 
+        /**
+         * Отправка запроса на добавление
+         */
         function insertAction() {
             execRemoteFun('actionAdd', 1, 'Отправка данных', onSuccess);
-
-            /*
-            var data = JSON.stringify({
-                jsonrpc: "2.0",
-                method: 'actionAdd',
-                //params: [1,2],
-                params: [$dialog.find('[name=action]').val(), $dialog.find('[name=limit]').val()],
-                id : 1
-            });
-
-
-            sendAjax({
-                method: 'POST',
-                url: window.location.protocol + '//' + window.location.host + '/api.php',
-                waitMsg: 'Сохранение данных',
-                //dataType: 'json',
-                data: data,
-                //contentType: 'application/json',
-                process: true
-            }, onSuccessSend);
-            */
         }
 
         var $dialog = $('#action-box');
@@ -287,10 +274,13 @@
         });
     }
 
-
+    //======================================================
     $(document).ready(function () {
+        $logData = $('#log-data');
         $("#tabs").tabs();
         $('#add-action').on('click', addAction);
+        $logData.on('click', 'tr', changeAction);
         loadActions();
+        loadActionLog('0', '1');
     })
 })();

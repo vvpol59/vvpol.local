@@ -66,15 +66,6 @@ function callRemoteFunction($fun, $params)
 }
 
 
-function test1($data){
-    return 'tst1' . $data;
-}
-
-function test2($data){
-    return 'tst2' . $data;
-}
-
-
 /**
  * Список действий
  * @return array
@@ -98,6 +89,12 @@ function actionList(){
     return $data;
 }
 
+/**
+ * Добавить действие
+ * @param $name
+ * @param $maxTime
+ * @return int
+ */
 function actionAdd($name, $maxTime){
     //return [1,2,3];
     global $db, $response;
@@ -106,6 +103,47 @@ function actionAdd($name, $maxTime){
     $response['debug'] = $sql;
         $db->exec($sql);
     return $db->lastInsertRowID();
+}
+
+/**
+ * Все действия за период
+ * @param $begDate
+ * @param $endDate
+ * @return array
+ */
+function actionLog($begDate, $endDate){
+    global $db, $response;
+    $sql = 'select * from working_log left join working_name dict on name.id = dict.id';
+    $res = $db->query($sql);
+    if ($res === false){
+        $response['error'] = $db->lastErrorMsg();
+        return [];
+    }
+    $data = [];
+
+    while (($row = $res->fetchArray(SQLITE3_ASSOC))) {
+        array_push($data, $row);
+    }
+    return $data;
+}
+
+function changeAction($curIdAction, $newIdAction){
+    global $db, $response;
+    // Время останова на текущей
+    $sql = 'select id from working_log where name_id = ' . $curIdAction . 'order by id desc limit 1';
+    $res = $db->query($sql);
+    if ($res === false){
+        $response['error'] = $db->lastErrorMsg();
+        return [];
+    }
+    $idLog = $res->fetchArray(SQLITE3_ASSOC)['id'];
+    $sql = "update working_log set stop_work=date('Ymd') where id=$idLog";
+    $db->exec($sql);
+    // Время старта на новой
+    $sql = "insert into work_log (name_id, begin_work) values($newIdAction, date('Ymd'))";
+    $db->exec($sql);
+    return 'OK';
+
 }
 
 //====================================================================

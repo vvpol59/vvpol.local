@@ -9,3 +9,8 @@ table {
 .ui-draggable, .ui-droppable {
 	background-position: top;
 }
+
+tr.active	{
+	color: #ffffff;
+	background-color: #0000ff;
+}
