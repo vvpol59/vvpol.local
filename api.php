@@ -3,6 +3,7 @@
 ini_set('error_reporting', E_ALL);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
+ini_set('max_execution_time', 600);
 
 
 
@@ -19,13 +20,11 @@ $response = array(
 
 
 
-class msgException extends Exception
-{
+class msgException extends Exception {
 
 }
 
-function getVar(&$var, $default = '')
-{
+function getVar(&$var, $default = '') {
     return isset($var) ? $var : $default;
 }
 
@@ -39,8 +38,7 @@ function getVar(&$var, $default = '')
  * @return mixed
  * @throws msgException
  */
-function callRemoteMethod($class, $method, $params)
-{
+function callRemoteMethod($class, $method, $params){
 // Проверка доступа к метод
     if (call_user_func_array(array($class, 'isRemotable'), array($method))) {
         if (empty($params)) {
@@ -60,8 +58,7 @@ function callRemoteMethod($class, $method, $params)
  * @param $params
  * @return mixed
  */
-function callRemoteFunction($fun, $params)
-{
+function callRemoteFunction($fun, $params){
     return call_user_func_array($fun, $params);
 }
 
@@ -127,21 +124,30 @@ function actionLog($begDate, $endDate){
     return $data;
 }
 
+/**
+ * Обработка изменения действия
+ */
 function changeAction($curIdAction, $newIdAction){
     global $db, $response;
     // Время останова на текущей
-    $sql = 'select id from working_log where name_id = ' . $curIdAction . 'order by id desc limit 1';
-    $res = $db->query($sql);
+    if ($curIdAction){ // переключение акции
+        $sql = 'select id from working_log where name_id=' . $curIdAction . ' order by id desc limit 1';
+        $res = $db->query($sql);
+        if ($res === false){
+            $response['error'] = $db->lastErrorMsg();
+            return [];
+        }
+        $idLog = $res->fetchArray(SQLITE3_ASSOC); //['id'];
+        $sql = "update working_log set stop_work=date('Ymd') where id=$idLog";
+        $db->exec($sql);
+    }
+    // Время старта для новой
+    $sql = "insert into work_log (name_id, begin_work) values($newIdAction, date('Ymd'))";
+    $res = $db->exec($sql);
     if ($res === false){
         $response['error'] = $db->lastErrorMsg();
         return [];
     }
-    $idLog = $res->fetchArray(SQLITE3_ASSOC)['id'];
-    $sql = "update working_log set stop_work=date('Ymd') where id=$idLog";
-    $db->exec($sql);
-    // Время старта на новой
-    $sql = "insert into work_log (name_id, begin_work) values($newIdAction, date('Ymd'))";
-    $db->exec($sql);
     return 'OK';
 
 }
@@ -162,24 +168,10 @@ try {
         throw new msgException('Не указан метод');
     }
     $classMethod = explode('.', $method);
-    //if (count($classMethod) != 2) {
-    //    throw new msgException('Неверно передан метод');
-    //}
-    //$res = call_user_func_array($method, $data['params']);
-
     $res = call_user_func_array($method, $data['params']);
-    // $res = callRemoteMethod($classMethod[0], $classMethod[1], $data['params']);
-    //echo json_encode($response);
 } catch (Exception $e) {
     $response['error'] = $e->getMessage();
-    //	echo json_encode(self::$response);
 } finally {
-    //if (isset($res['debug'])) {
-    //    $response['debug'] = $res['debug'];
-    //}
-    //if ($res['result'])) {
     $response['result'] = isset($res) ? $res : '';
-    //}
     echo json_encode($response);
 }
-// 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

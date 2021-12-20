@@ -1,7 +1,7 @@
 "use strict";
 
 (function () {
-    var $logData;
+    var $logData, debugPar;
 
 
     /**
@@ -125,7 +125,7 @@
         });
 
         $.ajax({
-            url: window.location.protocol + '//' + window.location.host + '/api.php',
+            url: window.location.protocol + '//' + window.location.host + '/api.php' + debugPar,
             type: "POST",
             contentType: 'application/json',
             async: false,
@@ -135,7 +135,7 @@
                 if (fail) {
                     fail(data);
                 } else {
-                    alert(data.errorMessage);
+                    alert(data.statusText);
                 }
             },
             complete: function(data) {
@@ -150,7 +150,6 @@
                 }
             }
         });
-
     }
 
 
@@ -179,6 +178,16 @@
      * Смена действия
      */
     function changeAction(){
+        function onSuccess(response){
+            console.log(response);
+            if (!response.error){
+
+
+
+            }
+
+
+        }
         var $row = $(this),
             curId = $logData.find('.active').data('id'),
             newId;
@@ -189,7 +198,6 @@
             $row.addClass('active');
             execRemoteFun('changeAction', [curId, newId], 1,'Смена действия', onSuccess);
         }
-
     }
 
     /**
@@ -276,6 +284,7 @@
 
     //======================================================
     $(document).ready(function () {
+        debugPar = location.search;
         $logData = $('#log-data');
         $("#tabs").tabs();
         $('#add-action').on('click', addAction);
