@@ -139,7 +139,13 @@
                 }
             },
             complete: function(data) {
-                var obj = $.parseJSON(data.responseText);  // todo Правильно обработать ответ не в JSON
+                var content = data.responseText, 
+                    obj;
+                if (content[0] === '{'){
+                    obj = $.parseJSON(content);
+                } else {
+                    alert(content);
+                }
                 showWaitOverlay('');
                 if (obj.error){
                     alert(obj.error.message);
@@ -290,6 +296,6 @@
         $('#add-action').on('click', addAction);
         $logData.on('click', 'tr', changeAction);
         loadActions();
-        loadActionLog('0', '1');
+        //loadActionLog('0', '1');
     })
 })();
