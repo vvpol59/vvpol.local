@@ -1,0 +1,39 @@
+Сброс на Linux Ubuntu
+Версии для проверки
+PhpStorm 2019.2.2 Build#PS-192.6603.42, built on September 12, 2019
+Linux w651 3.13.0-32-generic #57-Ubuntu SMP
+Сброс тестового периода
+Сбросить тестовый период можно из консоли, выполнив следующие команды:
+
+cd ~/.PhpStorm[version]
+rm config/eval/PhpStorm[version].evaluation.key
+rm config/options
+cd ~/.java/.userPrefs/jetbrains
+rm -rf phpstorm
+Для перехода к директории .PhpStorm[version] наберите в консоле cd ~/. далее tab
+
+Это решение скопировано с интернет и оно работает. Таким образом тестовый период 30 дней будет сброшен и можно начать новый.
+
+Для перемещения файлов лучше воспользоваться файл-менеджером Dolphin или каким-либо другим. Если вы собираетесь восстановить рабочее пространство, сохраните файлы из config/options отдельно для последующего использования
+
+Восстановление проектов и подключений
+Списки проектов и подключений находятся в двух файлах webServers.xml и recentProjectDirectories.xml
+
+Файл recentProjectDirectories.xml имеет примерно следующий вид:
+
+< entry key='$USER_HOME$/PhpstormProjects/CrmTest'>
+< value>
+< RecentProjectMetaInfo>
+< option name="build" value="PS-192.6603.42" />
+< option name="productionCode" value="PS" />
+< option name="binFolder" value="$APPLICATION_HOME_DIR$/bin" />
+< option name="projectOpenTimestamp" value="1571400758954" />
+< option name="buildTimestamp" value="1568298935318" />
+< /RecentProjectMetaInfo>
+< /value>
+< /entry>
+Для каждого, описанного в файле проекта, существуют свои projectOpenTimestamp и buildTimestamp которые необходимо заменить на актуальные. Например, после сброса тестового периода, создайте новый пустой проект и скопируйте актуальные значения параметров из нового файла
+
+config/options/recentProjectDirectories.xml
+После этого осталось только переместить обратно в config/options/ старый webServers.xml и обновленный recentProjectDirectories.xml. Восстановить цветовую схему и другие опци можно используя другие файлы каталога config/options/
+

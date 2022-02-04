@@ -187,7 +187,7 @@
         function onSuccess(response){
             console.log(response);
             if (!response.error){
-
+                $row.addClass('active');
 
 
             }
@@ -201,7 +201,7 @@
         //if ($active.length === 0 || $row !== $active){
             newId = $row.data('id');
             $logData.find('tr').removeClass('active');
-            $row.addClass('active');
+
             execRemoteFun('changeAction', [curId, newId], 1,'Смена действия', onSuccess);
         }
     }
