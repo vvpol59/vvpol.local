@@ -136,7 +136,7 @@ function execSql($sql){
             $response['error'] = $db->lastErrorMsg();
             return [true, ''];
         }
-        return true;
+        return [false, ''];
     } catch (Exception $e) {
         $response['error'] = $e->getMessage();
         return [true, ''];
@@ -171,7 +171,7 @@ function actionAdd($name, $maxTime){
     //return [1,2,3];
     global $db, $response;
     $name = $db->escapeString($name);
-    $sql = "insert into working_name (name, max_time) values('$name',$maxTime)";
+    $sql = "insert into working_name (name, max_time, hidden) values('$name',$maxTime, 0)";
     [$is_error, $res] = execSql($sql);
     if ($is_error){
         $response['debug'][] = $sql;
@@ -187,15 +187,17 @@ function actionAdd($name, $maxTime){
  * @return array
  */
 function actionGroupLog($begDate, $endDate){
-    global $db, $response;
+    global $response;
     try {
-        $beg = strtotime("$begDate 00:00:00");
+        $_ = explode('-', $begDate);
+        $beg = (integer)($_[2] . $_[1] . $_[0]);
         if (!$endDate) {
-            $end = strtotime("$begDate 23:59:59");
+            $end = $beg;
         } else {
-            $end = strtotime("$endDate 23:59:59");
+            $_ = explode('-', $endDate);
+            $end = (integer)($_[2] . $_[1] . $_[0]);
         };
-        $subSQL = "select sum(stop_work - begin_work) as sum from working_log l where n.id=name_id and begin_work BETWEEN $beg and $end";
+        $subSQL = "select sum(stop_work - begin_work) as sum from working_log l where n.id=name_id and date BETWEEN $beg and $end";
         $sql = "select n.id, n.name, max_time, ($subSQL) as sum from working_name n";
         [$error, $data] = select($sql);
         if ($error){
@@ -217,8 +219,10 @@ function actionGroupLog($begDate, $endDate){
  */
 function changeAction($curIdAction, $newIdAction){
     global $response;
+    // todo  Если пересеклись сутки - закрытие оформить как две записи
     try {
-        $timestamp = time();
+        $time = time() - strtotime('today');  // Текущая секунда суток
+        //$timestamp = time();
         $duration = 0;
         // Выборка текущей акции - последняя с $curIdAction
         if ($curIdAction){
@@ -228,19 +232,19 @@ function changeAction($curIdAction, $newIdAction){
             $response['debug'][] = $data;
             if ($is_error){
                 $response['debug'][] = $sql;
-                return array('duration' => 0, 'last' => $timestamp);
+                return array('duration' => 0, 'last' => $time);
             }
             // Время останова на текущей
             $id = $data[0]['id'];
-            $sql = "update working_log set stop_work=$timestamp where id=$id";
+            $sql = "update working_log set stop_work=$time where id=$id";
             [$is_error, $res] = execSql($sql);
             if ($is_error){
                 $response['debug'][] = $sql;
-                return array('duration' => 0, 'last' => $timestamp);
+                return array('duration' => 0, 'last' => $time);
             }
 
         } else {  // Нет текущего действия (сразу после загрузки, например)
-            $data[0]['begin_work'] = $timestamp;
+            $data[0]['begin_work'] = $time;
         }
         $response['debug'][] = $data;
         // подсчёт длительности
@@ -248,22 +252,22 @@ function changeAction($curIdAction, $newIdAction){
             $response['error'] = 'not open action';
             $duration = 0;
         } else {
-            $duration = $timestamp - $data[0]['begin_work'];
+            $duration = $time - $data[0]['begin_work'];
         }
         // Добавление записи на новой
         // Время старта для новой
         if ($newIdAction){
-            $sql = "insert into working_log (name_id, begin_work) values($newIdAction, $timestamp)";
+            $sql = "insert into working_log (name_id, begin_work) values($newIdAction, $time)";
             [$is_error, $res] = execSql($sql);
             if ($is_error){
                 $response['debug'][] = $sql;
-                return array('duration' => 0, 'last' => $timestamp);
+                return array('duration' => 0, 'last' => $time);
             }
         }
-        return array('duration' => $duration, 'last' => $timestamp);
+        return array('duration' => $duration, 'last' => $time);
     } catch (Exception $e) {
         $response['error'] = $e->getMessage();
-        return array('duration' => 0, 'last' => $timestamp);
+        return array('duration' => 0, 'last' => $time);
     }
 
 }
