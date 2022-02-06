@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SQLite</title>
+    <link rel="stylesheet" type="text/css" href="/js/working-time.css">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/lib.js"></script>
+    <style>
+        .container  {
+            border: #f08080 1px solid;
+            padding: 10px;
+            margin: 10px;
+        }
+        .container input    {
+            width: 85%;
+        }
+    </style>
+    <script>
+        "use strict";
+        (function () {
+            var $selectResult;
+
+            function runSelect() {
+                function onSuccess(response) {
+                    if (!response.error) {
+                        var result = response.result,
+                        field;
+                        if (result.length > 0){
+                            var $row = $('<tr></tr>');
+                            for (field in result[0]) {
+                                $('<th>' + field + '</th>').appendTo($row);
+                            }
+                            $row.appendTo($selectResult);
+                            for (var i = 0; i < result.length; i++){
+                                $row = $('<tr></tr>');
+                                for (field in result[i]){
+                                    $('<td>' + result[i][field] + '</td>').appendTo($row);
+                                    $row.appendTo($selectResult);
+                                }
+                            }
+                        } else {
+                            alert('По запросу ничего не найдено')
+                        }
+                    }
+                }
+                var sql = 'select ' + $('#select').val();
+                $selectResult.empty();
+                execRemoteFun('remoteSelect', [sql], 1,'Выполнение запроса', onSuccess);
+            }
+
+            function runEval() {
+                function onSuccess(response) {
+                    if (!response.error) {
+                        $('#eval-result').text(response.result);
+                    }
+                }
+
+
+                var _eval = $('#eval').val();
+                $selectResult.empty();
+                $('#error-box').html('');
+                execRemoteFun('remoteEval', [_eval], 1,'Выполнение eval', onSuccess);
+
+            }
+//======================================================================================
+            $(document).ready(function(){
+                $selectResult = $('#select-result');
+                $('#run-select').on('click', runSelect);
+                $('#run-eval').on('click', runEval);
+            })
+
+
+        })();
+
+
+    </script>
+</head>
+<body>
+<div id="error-box"></div>
+<div class="container">
+    <span>select</span><input id="select" type="text">
+    <button id="run-select">RUN select</button>
+    <div style="max-height: 400px; overflow: scroll; display: inline-block">
+        <table class="table" id="select-result"></table>
+    </div>
+    <div>* from working_name</div>
+    <div>* from working_log</div>
+    <div>id, datetime(begin_work, 'unixepoch') as begin,  datetime(stop_work, 'unixepoch') as stop, name_id from working_log</div>
+    <div>id, datetime(begin_work, 'unixepoch') as begin,  datetime(stop_work, 'unixepoch') as stop, name_id from working_log</div>
+    <div>id, sum(stop_work - begin_work) AS SUMM , name_id from working_log group by name_id</div>
+    <div>l.id, n.name, sum(stop_work - begin_work) as sum from working_log l inner join working_name n on name_id=n.id group by name_id;</div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+
+</div>
+<div class="container">
+    <select>
+        <option value="update" selected>update</option>
+        <option value="delete">create</option>
+    </select><input id="update" type="text">
+    <button id="run-update">RUN update</button>
+    <div id="update-result"></div>
+</div>
+<div class="container">
+    <span>eval php</span>
+    <input id="eval" type="text">
+    <button id="run-eval">RUN exec</button>
+    <div id="eval-result"></div>
+</div>
+</body>
+</html>

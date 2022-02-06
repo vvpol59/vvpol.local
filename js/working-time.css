@@ -12,5 +12,22 @@ table {
 
 tr.active	{
 	color: #ffffff;
-	background-color: #0000ff;
+	background-color: #0000ff!important;
+}
+.table  {
+	margin: 10px 0;
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+table tr:nth-child(2n+1) {
+	background-color: #ffffab;
+}
+.table td, .table th  {
+	padding: 4px 8px;
+	border: 1px solid #808080;
+	white-space: nowrap;
+}
+.table th   {
+	background-color: #aaaaaa;
 }
