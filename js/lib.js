@@ -159,6 +159,7 @@ function execRemoteFun(fun, params, id, msg, success, fail) {
                 obj = $.parseJSON(content);
             } else {
                 $('#error-box').html(content);
+                return;
             }
             showWaitOverlay('');
             if (obj['error']){
@@ -181,7 +182,17 @@ function dateToStr(date) {
     var _date = '00' + date.getDate(),
         month = '00' + (date.getMonth() + 1);
     return [_date.slice(-2), month.slice(-2), date.getFullYear()].join('-');
+}
 
-
-
+/**
+ *
+ * @param time   unix timestamp
+ * @returns {*}
+ */
+function datetimeToStr(time) {
+    if (!time) return time;
+    var date = new Date(time * 1000);
+    return leadingZeros(date.getDate(), 2) + '-' + leadingZeros(date.getMonth() + 1, 2) + '-' +
+        date.getFullYear() + ' ' + leadingZeros(date.getHours(), 2) + ':' + leadingZeros(date.getMinutes(), 2) +
+        ':' + leadingZeros(date.getSeconds(), 2);
 }

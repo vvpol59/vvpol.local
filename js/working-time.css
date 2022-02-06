@@ -31,3 +31,49 @@ table tr:nth-child(2n+1) {
 .table th   {
 	background-color: #aaaaaa;
 }
+
+.command-box	{
+	padding: 4px;
+	margin: 4px;
+}
+.command-box > div	{
+	display: inline-block;
+	margin: 4px;
+	cursor: pointer;
+	padding: 4px;
+}
+.command-box > div:hover	{
+	color: #0000ff;
+	border: 1px solid red;
+	border-radius: 3px;
+	background-color: #cccccc;
+	padding: 3px;
+
+}
+.not-visible	{
+	visibility: hidden;
+}
+.icon-btn {
+	width: 20px;
+	height: 20px;
+	display: inline-block;
+	cursor: pointer;
+	-webkit-transition: all 0.15s linear;
+	transition: all 0.15s linear;
+	background-size: 20px auto !important;
+	padding: 3px;
+	border: solid 1px transparent;
+	margin-right: 5px;
+}
+.btn-delete	{
+	background: url(/img/delete.png) center no-repeat;
+}
+.btn-edit	{
+	background: url(/img/edit.png) center no-repeat;
+}
+.btn-delete:hover	{
+	background: url(/img/delete-active.png) center no-repeat;
+}
+.btn-edit:hover	{
+	background: url(/img/edit-active.png) center no-repeat;
+}

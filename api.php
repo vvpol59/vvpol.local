@@ -1,11 +1,10 @@
 <?php
 
 ini_set('error_reporting', E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 ini_set('display_startup_errors', 1);
 set_time_limit(600);
 ini_set('max_execution_time', 600);
-
 date_default_timezone_set('Europe/Moscow');
 
 $cur_str = date("d-m-Y H:i:s");
@@ -113,22 +112,34 @@ function callRemoteFunction($fun, $params){
 function select($sql){
     try {
         global $db, $response;
-        $response['debug'][] = 0;
         $res = $db->query($sql);
-        $response['debug'][] = 1;
         if ($res === false){
             $response['error'] = $db->lastErrorMsg();
-            return [$db->lastErrorMsg(), []];
+            return [true, []];
         }
         $data = [];
         while (($row = $res->fetchArray(SQLITE3_ASSOC))) {
             array_push($data, $row);
         }
-        return [null, $data];
+        return [false, $data];
     } catch (Exception $e) {
-        $response['debug'][] = 2;
-        $response['debug'][] = $e->getMessage();
-        return [$e->getMessage(), []];
+        $response['error'] = $e->getMessage();
+        return [true, []];
+    }
+}
+
+function execSql($sql){
+    try{
+        global $db, $response;
+        $res = $db->exec($sql);
+        if ($res === false){
+            $response['error'] = $db->lastErrorMsg();
+            return [true, ''];
+        }
+        return true;
+    } catch (Exception $e) {
+        $response['error'] = $e->getMessage();
+        return [true, ''];
     }
 }
 
@@ -138,6 +149,7 @@ function select($sql){
  * Список действий
  * @return array
  */
+/*
 function actionList(){
     global $db, $response;
     [$error, $data] = select('select id, name, max_time from working_name');
@@ -147,6 +159,7 @@ function actionList(){
     }
     return $data;
 }
+*/
 
 /**
  * Добавить действие
@@ -158,9 +171,12 @@ function actionAdd($name, $maxTime){
     //return [1,2,3];
     global $db, $response;
     $name = $db->escapeString($name);
-    $sql = "insert into working_name (name, max_time) values('$name',10)";
-    $response['debug'] = $sql;
-        $db->exec($sql);
+    $sql = "insert into working_name (name, max_time) values('$name',$maxTime)";
+    [$is_error, $res] = execSql($sql);
+    if ($is_error){
+        $response['debug'][] = $sql;
+        return '';
+    }
     return $db->lastInsertRowID();
 }
 
@@ -174,22 +190,13 @@ function actionGroupLog($begDate, $endDate){
     global $db, $response;
     try {
         $beg = strtotime("$begDate 00:00:00");
-        $response['debug'][] = "$begDate 00:00:00";
-        $response['debug'][] = $beg;
-        $response['debug'][] = date('d-m-Y H:i:s', $beg);
         if (!$endDate) {
             $end = strtotime("$begDate 23:59:59");
-            $response['debug'][] = "$begDate 23:59:59";
         } else {
             $end = strtotime("$endDate 23:59:59");
-            $response['debug'][] = "$endDate 23:59:59";
         };
-        $response['debug'][] = $end;
-        $response['debug'][] = date('d-m-Y H:i:s', $end);
-
         $subSQL = "select sum(stop_work - begin_work) as sum from working_log l where n.id=name_id and begin_work BETWEEN $beg and $end";
-        $sql = "select n.id, n.name, ($subSQL) as sum from working_name n";
-        $response['debug'][] = $sql;
+        $sql = "select n.id, n.name, max_time, ($subSQL) as sum from working_name n";
         [$error, $data] = select($sql);
         if ($error){
             $response['error'] = $error;
@@ -200,88 +207,64 @@ function actionGroupLog($begDate, $endDate){
         $response['error'] = $e->getMessage();
         return [];
     }
-
-
-    return $data;
-
-    //$sql = 'select * from working_log left join working_name dict on name.id = dict.id';
-    //$res = $db->query($sql);
-    /*
-    if ($res === false){
-        $response['error'] = $db->lastErrorMsg();
-        return [];
-    }
-    $data = [];
-
-    while (($row = $res->fetchArray(SQLITE3_ASSOC))) {
-        array_push($data, $row);
-    }
-    return $data;
-    */
-    // strtotime('22-09-2008 00:01:00'); для диапазона стартовой даты
-
 }
 
 /**
  * Обработка изменения действия
+ * @param $curIdAction    on tableworking_name
+ * @param $newIdAction    on tableworking_name
+ * @return array     (Длительность закрытой акции (сек.), timestsmp последнего использования)
  */
 function changeAction($curIdAction, $newIdAction){
-    global $db, $response;
-    // Время останова на текущей
-    // поиск незакрытой акции
-    [$error, $data] = select('select id from working_log where stop_work is null');
-    if ($error){
-        return [];
-    }
-    /*
-    $sql = 'select id from working_log where stop_work is null';
-    $res = $db->query($sql);
-    if ($res === false){
-        $response['error'] = $db->lastErrorMsg();
-        return [];
-    }
-    */
-    $open_actions = '';
-    for ($i = 0; $i < count($data); $i++){
-        $open_actions .= (string)$data[$i]['id'] . ',';
-    }
-    /*
-    while (($item = $res->fetchArray(SQLITE3_ASSOC))) {
-        $open_actions .= (string)$item['id'] . ',';
-        //array_push($open_actions, $item);
-    }
-*/
-    $timestamp = time();
-    if ($open_actions){
-        $actions = trim($open_actions, ',');
-        $sql = "update working_log set stop_work=$timestamp where id in($actions)";
-        $res = $db->exec($sql);
-        if ($res === false){
-            $response['error'] = $db->lastErrorMsg();
-            return [];
+    global $response;
+    try {
+        $timestamp = time();
+        $duration = 0;
+        // Выборка текущей акции - последняя с $curIdAction
+        if ($curIdAction){
+            $sql = "select id, begin_work, stop_work from working_log where name_id=$curIdAction order by id desc limit 1";
+            [$is_error, $data] = select($sql);
+            $response['debug'][] = $sql;
+            $response['debug'][] = $data;
+            if ($is_error){
+                $response['debug'][] = $sql;
+                return array('duration' => 0, 'last' => $timestamp);
+            }
+            // Время останова на текущей
+            $id = $data[0]['id'];
+            $sql = "update working_log set stop_work=$timestamp where id=$id";
+            [$is_error, $res] = execSql($sql);
+            if ($is_error){
+                $response['debug'][] = $sql;
+                return array('duration' => 0, 'last' => $timestamp);
+            }
+
+        } else {  // Нет текущего действия (сразу после загрузки, например)
+            $data[0]['begin_work'] = $timestamp;
         }
-    }
-/*
-    if ($curIdAction){ // переключение акции
-        $sql = 'select id from working_log where name_id=' . $curIdAction . ' order by id desc limit 1';
-        $res = $db->query($sql);
-        if ($res === false){
-            $response['error'] = $db->lastErrorMsg();
-            return [];
+        $response['debug'][] = $data;
+        // подсчёт длительности
+        if (count($data) == 0) {
+            $response['error'] = 'not open action';
+            $duration = 0;
+        } else {
+            $duration = $timestamp - $data[0]['begin_work'];
         }
-        $idLog = $res->fetchArray(SQLITE3_ASSOC); //['id'];
-        $sql = "update working_log set stop_work=$timestamp where id=$idLog";
-        $db->exec($sql);
+        // Добавление записи на новой
+        // Время старта для новой
+        if ($newIdAction){
+            $sql = "insert into working_log (name_id, begin_work) values($newIdAction, $timestamp)";
+            [$is_error, $res] = execSql($sql);
+            if ($is_error){
+                $response['debug'][] = $sql;
+                return array('duration' => 0, 'last' => $timestamp);
+            }
+        }
+        return array('duration' => $duration, 'last' => $timestamp);
+    } catch (Exception $e) {
+        $response['error'] = $e->getMessage();
+        return array('duration' => 0, 'last' => $timestamp);
     }
-    */
-    // Время старта для новой
-    $sql = "insert into working_log (name_id, begin_work) values($newIdAction, $timestamp)";
-    $res = $db->exec($sql);
-    if ($res === false){
-        $response['error'] = $db->lastErrorMsg();
-        return [];
-    }
-    return 'OK';
 
 }
 
@@ -330,9 +313,6 @@ function remoteEval($codeStr){
 try {
     $auth = explode('~', (isset($_COOKIE['auth']) ? $_COOKIE['auth'] : '~') . '~');
     $post = $body = file_get_contents('php://input');
-    //self::$response['re'] = $a;
-    //self::$response['srv'] = $_SERVER;
-    //$response['debug'] = $post;
     $data = json_decode($post, true);
     if (getVar($data['jsonrpc'], '') != '2.0') {
         throw new msgException('Неверный протокол [' . $post . ']');
