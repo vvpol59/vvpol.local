@@ -146,22 +146,6 @@ function execSql($sql){
 //================= Функции логера ====================
 
 /**
- * Список действий
- * @return array
- */
-/*
-function actionList(){
-    global $db, $response;
-    [$error, $data] = select('select id, name, max_time from working_name');
-    if ($error){
-        $response['error'] = $error;
-        return [];
-    }
-    return $data;
-}
-*/
-
-/**
  * Добавить действие
  * @param $name
  * @param $maxTime
@@ -178,6 +162,56 @@ function actionAdd($name, $maxTime){
         return '';
     }
     return $db->lastInsertRowID();
+}
+
+function actionDel($nameId) {
+    try {
+        global $response;
+        $sql = "delete from working_log where name_id=$nameId";
+        $response['debug'][] = "nameId = $nameId";
+        $response['debug'][] = 1;
+        [$is_error, $res] = execSql('BEGIN TRANSACTION');
+        $response['debug'][] = 2;
+        [$is_error, $res] = execSql($sql);
+        if ($is_error){
+            $response['debug'][] = $sql;
+            return '';
+        }
+
+        $sql = "delete from working_name where id=$nameId";
+        [$is_error, $res] = execSql($sql);
+        if ($is_error){
+            $response['debug'][] = $sql;
+            return '';
+        }
+        [$is_error, $res] = execSql('COMMIT');
+        if ($is_error){
+            $response['debug'][] = $sql;
+            return '';
+        }
+        return 'Ok';
+    } catch (Exception $e) {
+        $response['error'] = $e->getMessage();
+        return 'Err';
+    }
+}
+
+
+function actionGetDetail($nameId){
+    global $response;
+    try {
+        $intDate = (int)date("Ymd");
+        $sql = "select * from working_log where name_id=$nameId and date=$intDate order by id";
+        [$error, $data] = select($sql);
+        if ($error){
+            $response['error'] = $error;
+            return [];
+        }
+        return $data;
+    } catch (Exception $e) {
+        $response['error'] = $e->getMessage();
+        return 'Err';
+    }
 }
 
 /**
@@ -215,7 +249,7 @@ function actionGroupLog($begDate, $endDate){
  * Обработка изменения действия
  * @param $curIdAction    on tableworking_name
  * @param $newIdAction    on tableworking_name
- * @return array     (Длительность закрытой акции (сек.), timestsmp последнего использования)
+ * @return array     (begin - начало закрытой,  end - конц закрытой (начало открытой) в сек. от начала суток
  */
 function changeAction($curIdAction, $newIdAction){
     global $response;
@@ -223,24 +257,26 @@ function changeAction($curIdAction, $newIdAction){
     try {
         $time = time() - strtotime('today');  // Текущая секунда суток
         //$timestamp = time();
-        $duration = 0;
+        //$duration = 0;
         // Выборка текущей акции - последняя с $curIdAction
+        $intDate = (int)date("Ymd");
         if ($curIdAction){
-            $sql = "select id, begin_work, stop_work from working_log where name_id=$curIdAction order by id desc limit 1";
+            $sql = "select * from working_log where name_id=$curIdAction order by id desc limit 1";
             [$is_error, $data] = select($sql);
             $response['debug'][] = $sql;
             $response['debug'][] = $data;
             if ($is_error){
                 $response['debug'][] = $sql;
-                return array('duration' => 0, 'last' => $time);
+                return array('begin' => 0, 'end' => $time, 'ok' => '3');
             }
+            $currBegin = $data[0]['begin_work'];
             // Время останова на текущей
             $id = $data[0]['id'];
             $sql = "update working_log set stop_work=$time where id=$id";
             [$is_error, $res] = execSql($sql);
             if ($is_error){
                 $response['debug'][] = $sql;
-                return array('duration' => 0, 'last' => $time);
+                return array('begin' => 0, 'end' => $time, 'ok' => '2');
             }
 
         } else {  // Нет текущего действия (сразу после загрузки, например)
@@ -250,24 +286,24 @@ function changeAction($curIdAction, $newIdAction){
         // подсчёт длительности
         if (count($data) == 0) {
             $response['error'] = 'not open action';
-            $duration = 0;
+            //$duration = 0;
         } else {
-            $duration = $time - $data[0]['begin_work'];
+            //$duration = $time - $data[0]['begin_work'];
         }
         // Добавление записи на новой
         // Время старта для новой
         if ($newIdAction){
-            $sql = "insert into working_log (name_id, begin_work) values($newIdAction, $time)";
+            $sql = "insert into working_log (name_id, begin_work, date) values($newIdAction, $time, $intDate)";
             [$is_error, $res] = execSql($sql);
             if ($is_error){
                 $response['debug'][] = $sql;
-                return array('duration' => 0, 'last' => $time);
+                return array('begin' => $currBegin, 'end' => $time, 'ok' => '1');
             }
         }
-        return array('duration' => $duration, 'last' => $time);
+        return array('begin' => $currBegin, 'end' => $time, 'ok' => 'ok');
     } catch (Exception $e) {
         $response['error'] = $e->getMessage();
-        return array('duration' => 0, 'last' => $time);
+        return array('begin' => 0, 'end' => $time, 'ok' => 'e');
     }
 
 }
@@ -292,6 +328,24 @@ function remoteSelect($sql){
         $response['error'] = $e->getMessage();
         return [];
     }
+}
+
+function remoteExec($sql){
+    global $response;
+    try {
+        [$error, $data] = execSql($sql);
+        if ($error){
+            $response['error'] = $error;
+            return [];
+        }
+        return $data;
+    } catch (Exception $e) {
+        $response['error'] = $e->getMessage();
+        return [];
+    }
+
+
+
 }
 
 /**

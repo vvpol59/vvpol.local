@@ -21,6 +21,9 @@
         (function () {
             var $selectResult;
 
+            /**
+             * Выполнение выборки
+             */
             function runSelect() {
                 function onSuccess(response) {
                     if (!response.error) {
@@ -44,10 +47,27 @@
                         }
                     }
                 }
+                //==========================================================
                 var sql = 'select ' + $('#select').val();
                 $selectResult.empty();
                 execRemoteFun('remoteSelect', [sql], 1,'Выполнение запроса', onSuccess);
             }
+
+            /**
+             * Выполнение модификации таблицы
+             */
+            function runExec() {
+                function onSuccess(response) {
+                    if (!response.error) {
+                        $('#exec-result').text(response.result);
+                    }
+                }
+                //========================================
+                var sql = $('#exec-type').val() + ' ' + $('#update').val();
+                $('#exec-result').empty();
+                execRemoteFun('remoteExec', [sql], 'Выполнение запроса', onSuccess);
+            }
+
 
             function runEval() {
                 function onSuccess(response) {
@@ -67,6 +87,7 @@
             $(document).ready(function(){
                 $selectResult = $('#select-result');
                 $('#run-select').on('click', runSelect);
+                $('#run-update').on('click', runExec);
                 $('#run-eval').on('click', runEval);
             })
 
@@ -99,12 +120,13 @@
 
 </div>
 <div class="container">
-    <select>
+    <select id="exec-type">
         <option value="update" selected>update</option>
-        <option value="delete">create</option>
+        <option value="insert" selected>insert</option>
+        <option value="delete">delete</option>
     </select><input id="update" type="text">
     <button id="run-update">RUN update</button>
-    <div id="update-result"></div>
+    <div id="exec-result"></div>
 </div>
 <div class="container">
     <span>eval php</span>

@@ -196,3 +196,8 @@ function datetimeToStr(time) {
         date.getFullYear() + ' ' + leadingZeros(date.getHours(), 2) + ':' + leadingZeros(date.getMinutes(), 2) +
         ':' + leadingZeros(date.getSeconds(), 2);
 }
+
+function secondsToStrTime(sec){
+    var time = secondsToTime(sec);
+    return leadingZeros(time['h'], 2) + ':' + leadingZeros(time['m'], 2) + ':' + leadingZeros(time['s'], 2);
+}
